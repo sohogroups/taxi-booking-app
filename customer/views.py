@@ -43,3 +43,33 @@ class CustomerSignUp(APIView):
 			return Response(customer_serializers.data,status=status.HTTP_200_OK)
 		return Response(customer_serializers.errors,status=status.HTTP_400_BAD_REQUEST)
 
+class CustomerProfile(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self,request,user_id,format=None):
+		queryset = Customers.objects.filter(user_id=user_id)
+		if not queryset:
+			return Response({"message": "Customer id does not exists"}, status=status.HTTP_400_BAD_REQUEST)
+		serializer = CustomerProfileSerializers(queryset,many=True)
+		return Response(serializer.data,status=status.HTTP_200_OK)
+
+	def get_object(self, user_id):
+	    try:
+	        return Customers.objects.get(user_id=user_id)
+	    except Customers.DoesNotExist:
+	        return None
+
+	def put(self,request,user_id,format=None):
+		queryset = self.get_object(user_id)
+		if not queryset:
+			return Response({"message": "Customer id does not exists"}, status=status.HTTP_400_BAD_REQUEST)
+		serializer = CustomerProfileSerializers(queryset,data=request.data)
+		if serializer.is_valid():
+			customer_email = request.data['email']
+			user = UserMaster.objects.get(id=user_id)
+			user.email = customer_email
+			user.save()
+			customer = serializer.save()
+			return Response(serializer.data,status=status.HTTP_200_OK)
+		return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
